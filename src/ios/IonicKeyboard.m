@@ -47,10 +47,24 @@
                                object:nil
                                queue:[NSOperationQueue mainQueue]
                                usingBlock:^(NSNotification* notification) {
-                                   [weakSelf.commandDelegate evalJs:@"cordova.plugins.Keyboard.isVisible = false; cordova.fireWindowEvent('native.keyboardhide'); "];
 
-                                   //deprecated
-                                   [weakSelf.commandDelegate evalJs:@"cordova.fireWindowEvent('native.hidekeyboard'); "];
+                                   CGRect screen = [[UIScreen mainScreen] bounds];
+                                   CGRect keyboard = ((NSValue*)notification.userInfo[@"UIKeyboardFrameBeginUserInfoKey"]).CGRectValue;
+                                   CGRect intersection = CGRectIntersection(screen, keyboard);
+
+                                   /*
+                                    * When an hardware keyboard is attached to the device just a toolbar is displayed when an input obtain the focus.
+                                    * The toolbar has various buttons and one of this (the down arrow) can be used to dismiss it an blur the input.
+                                    * If the keyboard is dismissed in this way the next time that an input obtains the focus the toolbar does not appear
+                                    * until that the user starts to type a char in the keyboard. The problem is that when this happen iOS send two consecutive
+                                    * UIKeyboardWillHide notifications. The need to be skipped otherwise the input is automatically blurred.
+                                    */
+                                   if (intersection.size.height > 0) {
+                                       [weakSelf.commandDelegate evalJs:@"cordova.plugins.Keyboard.isVisible = false; cordova.fireWindowEvent('native.keyboardhide'); "];
+
+                                       //deprecated
+                                       [weakSelf.commandDelegate evalJs:@"cordova.fireWindowEvent('native.hidekeyboard'); "];
+                                   }
                                }];
 }
 
